@@ -6,77 +6,64 @@
     <title>Panel de Administración</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Inter', sans-serif; } </style>
+    <style> body { font-family: 'Inter', sans-serif; } .dot-rojo { background-color: #ef4444; } .dot-naranja { background-color: #f97316; } .dot-amarillo { background-color: #f59e0b; } .dot-verde { background-color: #10b981; } .dot-azul { background-color: #3b82f6; } </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div id="loginOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4"><div class="bg-white p-8 rounded-lg shadow-2xl text-center w-full max-w-sm"><h2 class="text-2xl font-bold mb-4">Acceso de Administrador</h2><form id="loginForm"><input type="password" id="passwordInput" class="w-full px-4 py-3 border rounded-lg mb-4 text-center" placeholder="••••••••"><button type="submit" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg">Ingresar</button><p id="loginError" class="text-red-500 text-sm mt-2 h-4"></p></form></div></div>
     <div id="editUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-40 flex items-center justify-center p-4"><div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md"><h2 class="text-2xl font-bold mb-6">Editar Usuario</h2><form id="editUserForm"><input type="hidden" id="editUsername"><div class="mb-4"><label for="editFullName" class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="editFullName" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div class="mb-6"><label for="editPassword" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label><input type="text" id="editPassword" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div class="flex justify-end gap-4"><button type="button" id="cancelEditBtn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancelar</button><button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Guardar Cambios</button></div></form></div></div>
+    <!-- --- NUEVO: Modal para editar presets --- -->
+    <div id="editPresetModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-40 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6">Editar Observación</h2>
+            <form id="editPresetForm">
+                <input type="hidden" id="editPresetOldText">
+                <div class="mb-4"><label for="editPresetText" class="block text-sm font-medium text-gray-700">Texto de la Observación</label><input type="text" id="editPresetText" required class="mt-1 w-full px-3 py-2 border rounded-md"></div>
+                <div class="mb-6"><label for="editPresetLevel" class="block text-sm font-medium text-gray-700">Nivel de Triage Asociado</label><select id="editPresetLevel" class="mt-1 w-full px-3 py-2 border rounded-md"><option value="rojo">Rojo</option><option value="naranja">Naranja</option><option value="amarillo">Amarillo</option><option value="verde">Verde</option><option value="azul">Azul</option></select></div>
+                <div class="flex justify-end gap-4"><button type="button" id="cancelEditPresetBtn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancelar</button><button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Guardar Cambios</button></div>
+            </form>
+        </div>
+    </div>
     <div id="appContent" class="opacity-0 transition-opacity duration-500 container mx-auto p-8">
         <h1 class="text-4xl font-bold text-center mb-8">Panel de Administración</h1>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div class="bg-white p-6 rounded-lg shadow-md self-start">
-                <h2 class="text-2xl font-bold mb-4">Gestión de Usuarios</h2>
-                <form id="addUserForm" class="space-y-4 mb-6"><div><label for="newUsername" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" id="newUsername" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newPassword" class="block text-sm font-medium text-gray-700">Contraseña</label><input type="text" id="newPassword" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newFullName" class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="newFullName" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newRole" class="block text-sm font-medium text-gray-700">Rol</label><select id="newRole" class="mt-1 w-full px-3 py-2 border rounded-md"><option value="registro">Registro (Enfermería)</option><option value="medico">Médico</option><option value="estadisticas">Estadísticas</option></select></div><button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg">Crear Usuario</button></form>
-                <div id="userList" class="space-y-3 max-h-96 overflow-y-auto"></div>
-            </div>
-            <!-- --- NUEVO: Panel de Gestión de Presets --- -->
+            <div class="bg-white p-6 rounded-lg shadow-md self-start"><h2 class="text-2xl font-bold mb-4">Gestión de Usuarios</h2><form id="addUserForm" class="space-y-4 mb-6"><div><label for="newUsername" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" id="newUsername" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newPassword" class="block text-sm font-medium text-gray-700">Contraseña</label><input type="text" id="newPassword" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newFullName" class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="newFullName" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newRole" class="block text-sm font-medium text-gray-700">Rol</label><select id="newRole" class="mt-1 w-full px-3 py-2 border rounded-md"><option value="registro">Registro (Enfermería)</option><option value="medico">Médico</option><option value="estadisticas">Estadísticas</option></select></div><button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg">Crear Usuario</button></form><div id="userList" class="space-y-3 max-h-96 overflow-y-auto"></div></div>
             <div class="bg-white p-6 rounded-lg shadow-md self-start">
                 <h2 class="text-2xl font-bold mb-4">Gestión de Observaciones (Presets)</h2>
-                <form id="addPresetForm" class="flex gap-2 mb-4"><input type="text" id="newPresetInput" class="flex-grow px-3 py-2 border rounded-md" placeholder="Nueva observación..." required><button type="submit" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Añadir</button></form>
+                <!-- --- ACTUALIZADO: Formulario para añadir presets con nivel --- -->
+                <form id="addPresetForm" class="space-y-4 mb-4">
+                    <input type="text" id="newPresetInput" class="w-full px-3 py-2 border rounded-md" placeholder="Nueva observación..." required>
+                    <select id="newPresetLevel" class="w-full px-3 py-2 border rounded-md"><option value="rojo">Rojo</option><option value="naranja">Naranja</option><option value="amarillo">Amarillo</option><option value="verde" selected>Verde</option><option value="azul">Azul</option></select>
+                    <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Añadir Preset</button>
+                </form>
                 <div id="presetList" class="space-y-2 max-h-96 overflow-y-auto"></div>
             </div>
         </div>
-        <div class="mt-8 bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
-            <h2 class="text-2xl font-bold text-red-800">Acciones Peligrosas</h2><p class="text-red-700 mt-2 mb-4">Estas acciones no se pueden deshacer. Úsalas con precaución.</p>
-            <button id="resetDataBtn" class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg">Restaurar Sistema (Borrar Pacientes)</button>
-        </div>
+        <div class="mt-8 bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg"><h2 class="text-2xl font-bold text-red-800">Acciones Peligrosas</h2><p class="text-red-700 mt-2 mb-4">Estas acciones no se pueden deshacer. Úsalas con precaución.</p><button id="resetDataBtn" class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg">Restaurar Sistema (Borrar Pacientes)</button></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const socket = io(); const loginOverlay = document.getElementById('loginOverlay'); const loginForm = document.getElementById('loginForm'); const passwordInput = document.getElementById('passwordInput'); const loginError = document.getElementById('loginError'); const appContent = document.getElementById('appContent'); const addUserForm = document.getElementById('addUserForm'); const userList = document.getElementById('userList'); const editUserModal = document.getElementById('editUserModal'); const editUserForm = document.getElementById('editUserForm'); const cancelEditBtn = document.getElementById('cancelEditBtn'); const resetDataBtn = document.getElementById('resetDataBtn');
-            // --- NUEVO: Elementos para presets ---
-            const addPresetForm = document.getElementById('addPresetForm'); const newPresetInput = document.getElementById('newPresetInput'); const presetList = document.getElementById('presetList');
+            const addPresetForm = document.getElementById('addPresetForm'); const newPresetInput = document.getElementById('newPresetInput'); const newPresetLevel = document.getElementById('newPresetLevel'); const presetList = document.getElementById('presetList'); const editPresetModal = document.getElementById('editPresetModal'); const editPresetForm = document.getElementById('editPresetForm'); const cancelEditPresetBtn = document.getElementById('cancelEditPresetBtn');
             loginForm.addEventListener('submit', (e) => { e.preventDefault(); socket.emit('admin_login', passwordInput.value); });
             socket.on('admin_auth_success', () => { loginOverlay.style.display = 'none'; appContent.classList.remove('opacity-0'); socket.emit('get_users'); });
             socket.on('auth_fail', () => { loginError.textContent = 'Contraseña incorrecta.'; });
             const renderUsers = (users) => { userList.innerHTML = ''; users.forEach(user => { const userDiv = document.createElement('div'); userDiv.className = 'bg-gray-50 p-3 rounded flex items-center justify-between'; const isProtected = user.user === 'superadmin'; userDiv.innerHTML = `<div><p class="font-bold">${user.fullName} <span class="text-xs font-normal text-gray-500">(${user.role})</span></p><p class="text-sm text-gray-600">Usuario: <span class="font-mono">${user.user}</span></p><p class="text-sm text-gray-600">Clave: <span class="font-mono">${user.pass}</span></p></div><div class="flex gap-2"><button ${isProtected ? 'disabled' : ''} data-username="${user.user}" data-fullname="${user.fullName}" data-password="${user.pass}" class="edit-btn text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed">Editar</button><button ${isProtected ? 'disabled' : ''} data-username="${user.user}" data-fullname="${user.fullName}" class="delete-btn text-xs bg-red-100 text-red-800 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed">Eliminar</button></div>`; userList.appendChild(userDiv); }); };
             socket.on('users_update', renderUsers);
             addUserForm.addEventListener('submit', (e) => { e.preventDefault(); const newUser = { user: document.getElementById('newUsername').value, pass: document.getElementById('newPassword').value, fullName: document.getElementById('newFullName').value, role: document.getElementById('newRole').value, }; socket.emit('add_user', newUser); addUserForm.reset(); });
-            userList.addEventListener('click', (e) => { const target = e.target; if (target.classList.contains('delete-btn')) { const username = target.dataset.username; const fullName = target.dataset.fullname; if (confirm(`¿Estás seguro de que quieres eliminar al usuario "${fullName}" (${username})? Esta acción no se puede deshacer.`)) { socket.emit('delete_user', username); } } if (target.classList.contains('edit-btn')) { document.getElementById('editUsername').value = target.dataset.username; document.getElementById('editFullName').value = target.dataset.fullname; document.getElementById('editPassword').value = target.dataset.password; editUserModal.classList.remove('hidden'); } });
+            userList.addEventListener('click', (e) => { const target = e.target; if (target.classList.contains('delete-btn')) { const username = target.dataset.username; const fullName = target.dataset.fullname; if (confirm(`¿Estás seguro de que quieres eliminar al usuario "${fullName}" (${username})?`)) { socket.emit('delete_user', username); } } if (target.classList.contains('edit-btn')) { document.getElementById('editUsername').value = target.dataset.username; document.getElementById('editFullName').value = target.dataset.fullname; document.getElementById('editPassword').value = target.dataset.password; editUserModal.classList.remove('hidden'); } });
             cancelEditBtn.addEventListener('click', () => { editUserModal.classList.add('hidden'); });
             editUserForm.addEventListener('submit', (e) => { e.preventDefault(); const updatedUser = { username: document.getElementById('editUsername').value, newFullName: document.getElementById('editFullName').value, newPassword: document.getElementById('editPassword').value }; socket.emit('edit_user', updatedUser); editUserModal.classList.add('hidden'); });
-            resetDataBtn.addEventListener('click', () => { if (confirm('¡ATENCIÓN! Esta acción borrará TODO el historial de pacientes atendidos de forma permanente. ¿Estás seguro de que quieres continuar?')) { if (prompt('Para confirmar, escribe "BORRAR TODO" en mayúsculas:') === 'BORRAR TODO') { socket.emit('reset_patient_data'); } else { alert('Confirmación incorrecta. La operación ha sido cancelada.'); } } });
-            socket.on('reset_success', () => { alert('La base de datos de pacientes ha sido restaurada a cero.'); });
-
-            // --- NUEVO: Lógica para gestionar presets ---
-            addPresetForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const presetText = newPresetInput.value.trim();
-                if (presetText) {
-                    socket.emit('add_preset', presetText);
-                    newPresetInput.value = '';
-                }
-            });
-            presetList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('delete-preset-btn')) {
-                    const presetText = e.target.dataset.preset;
-                    if (confirm(`¿Seguro que quieres eliminar el preset "${presetText}"?`)) {
-                        socket.emit('delete_preset', presetText);
-                    }
-                }
-            });
-            function renderPresets(presets) {
-                presetList.innerHTML = '';
-                presets.sort((a,b) => a.localeCompare(b)).forEach(p => {
-                    const presetDiv = document.createElement('div');
-                    presetDiv.className = 'bg-gray-100 p-2 rounded flex items-center justify-between text-sm';
-                    presetDiv.innerHTML = `<span>${p}</span><button data-preset="${p}" class="delete-preset-btn text-red-500 font-bold text-lg leading-none">&times;</button>`;
-                    presetList.appendChild(presetDiv);
-                });
-            }
+            resetDataBtn.addEventListener('click', () => { if (confirm('¡ATENCIÓN! ¿Estás seguro de que quieres borrar TODO el historial de pacientes?')) { if (prompt('Para confirmar, escribe "BORRAR TODO" en mayúsculas:') === 'BORRAR TODO') { socket.emit('reset_patient_data'); } else { alert('Confirmación incorrecta. Operación cancelada.'); } } });
+            socket.on('reset_success', () => { alert('La base de datos de pacientes ha sido restaurada.'); });
+            
+            addPresetForm.addEventListener('submit', (e) => { e.preventDefault(); const presetText = newPresetInput.value.trim(); const presetLevel = newPresetLevel.value; if (presetText) { socket.emit('add_preset', { text: presetText, level: presetLevel }); newPresetInput.value = ''; } });
+            presetList.addEventListener('click', (e) => { const target = e.target; if (target.classList.contains('delete-preset-btn')) { const presetText = target.dataset.preset; if (confirm(`¿Eliminar el preset "${presetText}"?`)) { socket.emit('delete_preset', presetText); } } if (target.classList.contains('edit-preset-btn')) { document.getElementById('editPresetOldText').value = target.dataset.preset; document.getElementById('editPresetText').value = target.dataset.preset; document.getElementById('editPresetLevel').value = target.dataset.level; editPresetModal.classList.remove('hidden'); } });
+            function renderPresets(presets) { presetList.innerHTML = ''; presets.sort((a,b) => a.text.localeCompare(b.text)).forEach(p => { const presetDiv = document.createElement('div'); presetDiv.className = 'bg-gray-100 p-2 rounded flex items-center justify-between text-sm'; presetDiv.innerHTML = `<div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full dot-${p.level}"></div><span>${p.text}</span></div><div class="flex gap-2"><button data-preset="${p.text}" data-level="${p.level}" class="edit-preset-btn text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Editar</button><button data-preset="${p.text}" class="delete-preset-btn text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Eliminar</button></div>`; presetList.appendChild(presetDiv); }); }
             socket.on('presets_update', renderPresets);
+            cancelEditPresetBtn.addEventListener('click', () => { editPresetModal.classList.add('hidden'); });
+            editPresetForm.addEventListener('submit', (e) => { e.preventDefault(); const payload = { oldText: document.getElementById('editPresetOldText').value, newText: document.getElementById('editPresetText').value, newLevel: document.getElementById('editPresetLevel').value }; socket.emit('edit_preset', payload); editPresetModal.classList.add('hidden'); });
         });
     </script>
 </body>
