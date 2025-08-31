@@ -12,6 +12,8 @@ const io = socketIo(server);
 const PORT = 3000;
 const DB_FILE = 'pacientes.json';
 const USERS_FILE = 'usuarios.json';
+// --- NUEVO: Archivo para guardar los presets ---
+const PRESETS_FILE = 'presets.json';
 
 const ADMIN_MASTER_PASS = "superadmin";
 let users = [];
@@ -21,17 +23,23 @@ app.get('/', (req, res) => res.redirect('/index.html'));
 
 let patients = [];
 let attendedHistory = [];
+// --- NUEVO: Variable para los presets ---
+let observationPresets = [];
 let isEmergency = false;
 let currentlyCalled = null;
 const triageOrder = { 'rojo': 1, 'naranja': 2, 'amarillo': 3, 'verde': 4, 'azul': 5 };
 
 const saveData = () => { fs.writeFile(DB_FILE, JSON.stringify({ patients, attendedHistory }, null, 2), err => { if (err) console.error("Error al guardar pacientes:", err); }); };
 const saveUsers = () => { fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), err => { if (err) console.error("Error al guardar usuarios:", err); }); };
+// --- NUEVO: Función para guardar los presets ---
+const savePresets = () => { fs.writeFile(PRESETS_FILE, JSON.stringify(observationPresets, null, 2), err => { if (err) console.error("Error al guardar presets:", err); }); };
 
 const loadData = () => {
     try {
         if (fs.existsSync(DB_FILE)) { const data = JSON.parse(fs.readFileSync(DB_FILE)); patients = data.patients || []; attendedHistory = data.attendedHistory || []; }
         if (fs.existsSync(USERS_FILE)) { users = JSON.parse(fs.readFileSync(USERS_FILE)); } else { users = [{ user: "admin", pass: "admin2025", role: "registro", fullName: "Admin Enfermería" }, { user: "medico1", pass: "med1", role: "medico", fullName: "Dr. House" }, { user: "stats", pass: "stats123", role: "estadisticas", fullName: "Jefe de Guardia" }]; saveUsers(); }
+        // --- NUEVO: Cargar presets desde archivo ---
+        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else { observationPresets = ["Parada cardiorrespiratoria", "Dolor torácico", "Dificultad respiratoria", "Tos con mocos", "Tos seca", "Dolor de garganta", "Cefalea leve", "Gastroenteritis"]; savePresets(); }
         console.log("Datos cargados correctamente.");
     } catch (err) { console.error("Error al cargar datos:", err); }
 };
@@ -42,17 +50,41 @@ const getDoctorGuard = (date) => { let guardDate = new Date(date); if (date.getH
 
 io.on('connection', (socket) => {
     let isAuthenticated = false; let userRole = null; let currentUser = null;
-    const authenticateSocket = (user) => { isAuthenticated = true; userRole = user.role; currentUser = user; socket.emit('auth_success', { role: user.role, user: user.user }); };
+    const authenticateSocket = (user) => {
+        isAuthenticated = true; userRole = user.role; currentUser = user;
+        socket.emit('auth_success', { role: user.role, user: user.user });
+        // --- NUEVO: Enviar presets al usuario de registro ---
+        if (user.role === 'registro') {
+            socket.emit('presets_update', observationPresets);
+        }
+    };
+
     socket.on('authenticate_user', ({ user, pass }) => { const foundUser = users.find(u => u.user === user && u.pass === pass); if (foundUser) authenticateSocket(foundUser); else socket.emit('auth_fail'); });
     socket.emit('update_patient_list', patients); socket.emit('emergency_status_update', isEmergency); socket.emit('update_call', currentlyCalled);
     const sendFullUserList = (targetSocket) => { const displayUsers = [{ user: "superadmin", pass: ADMIN_MASTER_PASS, role: "admin", fullName: "Administrador Principal" }, ...users]; targetSocket.emit('users_update', displayUsers); };
-    socket.on('admin_login', (pass) => { if (pass === ADMIN_MASTER_PASS) { isAuthenticated = true; userRole = 'admin'; socket.join('admin_room'); socket.emit('admin_auth_success'); sendFullUserList(socket); } else { socket.emit('auth_fail'); } });
+    socket.on('admin_login', (pass) => { if (pass === ADMIN_MASTER_PASS) { isAuthenticated = true; userRole = 'admin'; socket.join('admin_room'); socket.emit('admin_auth_success'); sendFullUserList(socket); socket.emit('presets_update', observationPresets); } else { socket.emit('auth_fail'); } });
     socket.on('get_users', () => { if (isAuthenticated && userRole === 'admin') sendFullUserList(socket); });
     socket.on('add_user', (newUser) => { if (isAuthenticated && userRole === 'admin' && newUser.user && newUser.pass && newUser.fullName && newUser.role) { if (!users.some(u => u.user === newUser.user) && newUser.user !== 'superadmin') { users.push(newUser); saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } } });
     socket.on('delete_user', (username) => { if (isAuthenticated && userRole === 'admin' && username !== 'superadmin') { users = users.filter(u => u.user !== username); saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } });
     socket.on('edit_user', ({ username, newFullName, newPassword }) => { if (isAuthenticated && userRole === 'admin' && username !== 'superadmin') { const userIndex = users.findIndex(u => u.user === username); if (userIndex > -1) { users[userIndex].fullName = newFullName; users[userIndex].pass = newPassword; saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } } });
     socket.on('reset_patient_data', () => { if (isAuthenticated && userRole === 'admin') { patients = []; attendedHistory = []; saveData(); io.emit('update_patient_list', patients); socket.emit('reset_success'); } });
     socket.on('search_patient_history', ({ query, role }) => { if (!isAuthenticated) return; const normalizedQuery = query.toUpperCase().trim(); let results = attendedHistory.filter(p => (p.dni && p.dni.includes(normalizedQuery)) || p.nombre.toUpperCase().includes(normalizedQuery)).sort((a, b) => b.attendedAt - a.attendedAt); if (role === 'registro') { results = results.map(p => { const { doctorNotes, ...patientData } = p; return patientData; }); } socket.emit('patient_history_result', results); });
+    
+    // --- NUEVOS EVENTOS: Para gestionar presets ---
+    socket.on('add_preset', (newPreset) => {
+        if (isAuthenticated && userRole === 'admin' && newPreset && !observationPresets.includes(newPreset)) {
+            observationPresets.push(newPreset);
+            savePresets();
+            io.emit('presets_update', observationPresets); // Notificar a todos (admin y registro)
+        }
+    });
+    socket.on('delete_preset', (presetToDelete) => {
+        if (isAuthenticated && userRole === 'admin' && presetToDelete) {
+            observationPresets = observationPresets.filter(p => p !== presetToDelete);
+            savePresets();
+            io.emit('presets_update', observationPresets); // Notificar a todos
+        }
+    });
 
     const setupProtectedEvents = () => {
         const events = {
