@@ -54,7 +54,7 @@ io.on('connection', (socket) => {
     socket.on('authenticate_token', (token) => { const foundUser = users.find(u => u.token === token); if (foundUser) authenticateSocket(foundUser); else socket.emit('auth_fail'); });
     socket.emit('update_patient_list', patients); socket.emit('emergency_status_update', isEmergency); socket.emit('update_call', currentlyCalled);
     const sendFullUserList = (targetSocket) => { const displayUsers = [{ user: "superadmin", pass: ADMIN_MASTER_PASS, role: "admin", fullName: "Administrador Principal" }, ...users]; targetSocket.emit('users_update', displayUsers); };
-    socket.on('admin_login', (pass) => { if (pass === ADMIN_MASTER_PASS) { isAuthenticated = true; userRole = 'admin'; socket.join('admin_room'); socket.emit('admin_auth_success'); sendFullUserList(socket); socket.emit('presets_update', observationPresets); } else { socket.emit('auth_fail'); } });
+    socket.on('admin_login', (pass) => { if (pass === ADMIN_MASTER_PASS) { isAuthenticated = true; userRole = 'admin'; socket.join('admin_room'); socket.emit('admin_auth_success', {token: crypto.randomBytes(16).toString('hex')}); sendFullUserList(socket); socket.emit('presets_update', observationPresets); } else { socket.emit('auth_fail'); } });
     socket.on('get_users', () => { if (isAuthenticated && userRole === 'admin') sendFullUserList(socket); });
     socket.on('add_user', (newUser) => { if (isAuthenticated && userRole === 'admin' && newUser.user && newUser.pass && newUser.fullName && newUser.role) { if (!users.some(u => u.user === newUser.user) && newUser.user !== 'superadmin') { newUser.token = crypto.randomBytes(16).toString('hex'); users.push(newUser); saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } } });
     socket.on('delete_user', (username) => { if (isAuthenticated && userRole === 'admin' && username !== 'superadmin') { users = users.filter(u => u.user !== username); saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } });
@@ -86,5 +86,28 @@ io.on('connection', (socket) => {
     socket.on('get_stats', () => { if (!isAuthenticated || userRole !== 'estadisticas') return; const now = new Date(); const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(); const patientsToday = attendedHistory.filter(p => p.horaLlegada >= todayStart); const stats = { totalAttendedToday: patientsToday.length, byTriage: patientsToday.reduce((acc, p) => { acc[p.nivelTriage] = (acc[p.nivelTriage] || 0) + 1; return acc; }, {}), avgWaitTime: patientsToday.length > 0 ? Math.round(patientsToday.reduce((sum, p) => sum + (p.attendedAt - p.horaLlegada), 0) / patientsToday.length / 60000) : 0 }; socket.emit('stats_update', stats); });
     socket.on('disconnect', () => console.log('Un cliente se ha desconectado.'));
 });
-server.listen(PORT, () => { loadData(); const ip = getLocalIpAddress(); const url = `http://${ip}:${PORT}`; console.log('===================================================='); console.log('      Servidor de Triage INICIADO CORRECTAMENTE     '); console.log('===================================================='); console.log(`\nAccede al portal principal en tu navegador:`); console.log(`\x1b[32m%s\x1b[0m`, ` -> ${url}`); open(url); });
-function getLocalIpAddress() { const interfaces = os.networkInterfaces(); for (const name of Object.keys(interfaces)) { for (const net of interfaces[name]) { if (net.family === 'IPv4' && !net.internal) { return net.address; } } } return 'localhost'; }
+
+server.listen(PORT, () => {
+    loadData();
+    const ip = getLocalIpAddress();
+    const url = `http://${ip}:${PORT}`;
+    console.log('====================================================');
+    console.log('      Servidor de Triage INICIADO CORRECTAMENTE     ');
+    console.log('====================================================');
+    console.log(`\nAccede al portal principal en tu navegador:`);
+    console.log(`\x1b[32m%s\x1b[0m`, ` -> ${url}`);
+    open(url);
+});
+
+function getLocalIpAddress() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const net of interfaces[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                return net.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+
