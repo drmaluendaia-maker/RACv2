@@ -47,25 +47,29 @@
             patientDNIInput.addEventListener('keyup', handleSearch); patientNameInput.addEventListener('keyup', handleSearch);
             socket.on('patient_history_result', (results) => { if (results && results.length > 0) { historyResults.innerHTML = ''; results.forEach(p => { const visitDiv = document.createElement('div'); visitDiv.className = 'bg-gray-100 p-3 rounded-md cursor-pointer hover:bg-gray-200'; visitDiv.innerHTML = `<div class="flex items-center justify-between"><p class="font-bold">${p.nombre} <span class="font-normal text-gray-600">- DNI: ${p.dni || 'N/A'}</span></p><div class="flex items-center gap-2"><span class="text-xs font-semibold">${new Date(p.attendedAt).toLocaleDateString('es-ES')}</span><div class="w-3 h-3 rounded-full dot-${p.nivelTriage}"></div></div></div><p class="text-sm mt-1 text-gray-700"><b>Notas de Enfermería:</b> ${p.notas || 'Sin notas.'}</p>`; visitDiv.addEventListener('click', () => { patientNameInput.value = p.nombre.toUpperCase(); patientDNIInput.value = p.dni || ''; patientNotesInput.value = ''; historyModal.classList.add('hidden'); }); historyResults.appendChild(visitDiv); }); historyModal.classList.remove('hidden'); } else { historyModal.classList.add('hidden'); } });
             closeHistoryBtn.addEventListener('click', () => { historyModal.classList.add('hidden'); });
-
-            // --- ACTUALIZADO: Lógica para recibir y usar presets del servidor ---
-            socket.on('presets_update', (presets) => {
-                observationPresets = presets;
-            });
+            socket.on('presets_update', (presets) => { observationPresets = presets; });
             observationSearch.addEventListener('input', () => {
                 const query = observationSearch.value.toLowerCase();
                 if (query.length < 2) { presetsDropdown.innerHTML = ''; presetsDropdown.classList.add('hidden'); return; }
-                const filtered = observationPresets.filter(p => p.toLowerCase().includes(query));
+                const filtered = observationPresets.filter(p => p.text.toLowerCase().includes(query));
                 presetsDropdown.innerHTML = '';
                 if (filtered.length > 0) {
                     filtered.forEach(preset => {
                         const item = document.createElement('div');
-                        item.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-                        item.textContent = preset;
+                        item.className = 'p-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2';
+                        item.innerHTML = `<div class="w-3 h-3 rounded-full dot-${preset.level}"></div><span>${preset.text}</span>`;
                         item.addEventListener('click', () => {
-                            patientNotesInput.value += (patientNotesInput.value ? ', ' : '') + preset;
+                            patientNotesInput.value += (patientNotesInput.value ? ', ' : '') + preset.text;
                             observationSearch.value = '';
                             presetsDropdown.classList.add('hidden');
+                            // --- ACTUALIZADO: Seleccionar automáticamente el botón de triage ---
+                            triageButtons.forEach(btn => {
+                                btn.classList.remove('selected');
+                                if (btn.dataset.level === preset.level) {
+                                    btn.classList.add('selected');
+                                    selectedLevel = preset.level;
+                                }
+                            });
                         });
                         presetsDropdown.appendChild(item);
                     });
