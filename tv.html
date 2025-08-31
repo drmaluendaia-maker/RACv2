@@ -6,151 +6,38 @@
     <title>Sala de Espera - Triage</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <style> 
-        body { font-family: 'Inter', sans-serif; background-color: #111827; color: #f3f4f6; overflow: hidden; } 
-        .dot-rojo { background-color: #ef4444; } 
-        .dot-naranja { background-color: #f97316; } 
-        .dot-amarillo { background-color: #f59e0b; } 
-        .dot-verde { background-color: #10b981; } 
-        .dot-azul { background-color: #3b82f6; } 
-        .status-ausente { color: #9ca3af; } 
-        @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } } 
-        .call-animation { animation: slideInUp 0.8s ease-out forwards; } 
-        @keyframes blink-emergency { 50% { background-color: #7f1d1d; } } 
-        .emergency-view { animation: blink-emergency 1.5s linear infinite; } 
-    </style>
+    <style> body { font-family: 'Inter', sans-serif; background-color: #111827; color: #f3f4f6; overflow: hidden; } .dot-rojo { background-color: #ef4444; } .dot-naranja { background-color: #f97316; } .dot-amarillo { background-color: #f59e0b; } .dot-verde { background-color: #10b981; } .dot-azul { background-color: #3b82f6; } .status-ausente { color: #9ca3af; } @keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .call-animation { animation: slideInUp 0.8s ease-out forwards; } @keyframes blink-emergency { 50% { background-color: #7f1d1d; } } .emergency-view { animation: blink-emergency 1.5s linear infinite; } </style>
 </head>
 <body class="min-h-screen">
-
-    <div id="startScreen" class="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center">
-        <h1 class="text-6xl font-black text-white mb-4">Sistema de Triage</h1>
-        <p class="text-2xl text-gray-400 mb-8">Pantalla de Sala de Espera</p>
-        <button id="startButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-xl">Iniciar Pantalla</button>
-    </div>
-
+    <div id="startScreen" class="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center"><h1 class="text-6xl font-black text-white mb-4">Sistema de Triage</h1><p class="text-2xl text-gray-400 mb-8">Pantalla de Sala de Espera</p><button id="startButton" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-xl">Iniciar Pantalla</button></div>
     <div id="appContent" class="hidden h-screen flex flex-col">
-        <div id="callOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-40 flex items-center justify-center">
-            <div id="callCard" class="text-center p-16">
-                <p id="callPatientName" class="text-9xl font-black text-white"></p>
-                <p id="callConsultorio" class="text-7xl font-bold text-yellow-400 mt-4"></p>
-            </div>
-        </div>
-        <div id="emergency-view" class="hidden emergency-view fixed inset-0 bg-red-900 z-30 flex items-center justify-center text-center p-8">
-            <h2 class="text-7xl font-bold text-white">Los médicos están atendiendo una emergencia. <br>Por favor, espere.</h2>
-        </div>
-        <header class="p-6">
-            <h1 class="text-5xl font-black text-center">Guardia Hospital A. Illia</h1>
-        </header>
+        <div id="callOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-40 flex items-center justify-center"><div id="callCard" class="text-center p-16"><p id="callPatientName" class="text-9xl font-black text-white"></p><p id="callConsultorio" class="text-7xl font-bold text-yellow-400 mt-4"></p></div></div>
+        <div id="emergency-view" class="hidden emergency-view fixed inset-0 bg-red-900 z-30 flex items-center justify-center text-center p-8"><h2 class="text-7xl font-bold text-white">Los médicos están atendiendo una emergencia. <br>Por favor, espere.</h2></div>
+        <header class="p-6"><h1 class="text-5xl font-black text-center">Guardia Hospital A. Illia</h1></header>
         <main class="flex-grow grid grid-cols-3 gap-8 p-8 overflow-hidden">
-            <div class="flex flex-col">
-                <h2 class="text-4xl font-bold mb-6 text-center">En Espera</h2>
-                <div id="patientList" class="flex-grow space-y-4 overflow-y-auto pr-4">
-                    <p id="noPatientsMessage" class="text-center text-gray-400 text-2xl mt-20">No hay pacientes en espera.</p>
-                </div>
-            </div>
-            <div class="flex flex-col">
-                <h2 class="text-4xl font-bold mb-6 text-center">En Consultorio</h2>
-                <div id="consultorioList" class="flex-grow space-y-4 overflow-y-auto pr-4">
-                    <p id="noConsultorioMessage" class="text-center text-gray-400 text-2xl mt-20">Consultorios libres.</p>
-                </div>
-            </div>
-            <div class="flex flex-col">
-                <h2 class="text-4xl font-bold mb-6 text-center text-purple-400">En Observación</h2>
-                <div id="preAdmissionList" class="flex-grow space-y-4 overflow-y-auto pr-4">
-                    <p id="noPreAdmissionMessage" class="text-center text-gray-400 text-2xl mt-20">No hay pacientes en observación.</p>
-                </div>
-            </div>
+            <div class="flex flex-col"><h2 class="text-4xl font-bold mb-6 text-center">En Espera</h2><div id="patientList" class="flex-grow space-y-4 overflow-y-auto pr-4"><p id="noPatientsMessage" class="text-center text-gray-400 text-2xl mt-20">No hay pacientes en espera.</p></div></div>
+            <div class="flex flex-col"><h2 class="text-4xl font-bold mb-6 text-center">En Consultorio</h2><div id="consultorioList" class="flex-grow space-y-4 overflow-y-auto pr-4"><p id="noConsultorioMessage" class="text-center text-gray-400 text-2xl mt-20">Consultorios libres.</p></div></div>
+            <div class="flex flex-col"><h2 class="text-4xl font-bold mb-6 text-center text-purple-400">En Observación</h2><div id="preAdmissionList" class="flex-grow space-y-4 overflow-y-auto pr-4"><p id="noPreAdmissionMessage" class="text-center text-gray-400 text-2xl mt-20">No hay pacientes en observación.</p></div></div>
         </main>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const socket = io(); 
-            const startScreen = document.getElementById('startScreen'); 
-            const startButton = document.getElementById('startButton'); 
-            const appContent = document.getElementById('appContent'); 
-            const patientListContainer = document.getElementById('patientList'); 
-            const noPatientsMessage = document.getElementById('noPatientsMessage'); 
-            const consultorioListContainer = document.getElementById('consultorioList'); 
-            const noConsultorioMessage = document.getElementById('noConsultorioMessage'); 
-            const preAdmissionListContainer = document.getElementById('preAdmissionList'); 
-            const noPreAdmissionMessage = document.getElementById('noPreAdmissionMessage'); 
-            const emergencyView = document.getElementById('emergency-view'); 
-            const callOverlay = document.getElementById('callOverlay'); 
-            const callCard = document.getElementById('callCard'); 
-            const callPatientName = document.getElementById('callPatientName'); 
-            const callConsultorio = document.getElementById('callConsultorio');
+            const socket = io(); const startScreen = document.getElementById('startScreen'); const startButton = document.getElementById('startButton'); const appContent = document.getElementById('appContent'); const patientListContainer = document.getElementById('patientList'); const noPatientsMessage = document.getElementById('noPatientsMessage'); const consultorioListContainer = document.getElementById('consultorioList'); const noConsultorioMessage = document.getElementById('noConsultorioMessage'); const preAdmissionListContainer = document.getElementById('preAdmissionList'); const noPreAdmissionMessage = document.getElementById('noPreAdmissionMessage'); const emergencyView = document.getElementById('emergency-view'); const callOverlay = document.getElementById('callOverlay'); const callCard = document.getElementById('callCard'); const callPatientName = document.getElementById('callPatientName'); const callConsultorio = document.getElementById('callConsultorio');
             let synth;
-            startButton.addEventListener('click', () => { 
-                if (typeof Tone !== 'undefined') { Tone.start(); synth = new Tone.Synth().toDestination(); } 
-                startScreen.style.display = 'none'; 
-                appContent.classList.remove('hidden'); 
-            });
-            const playSound = () => { 
-                if (synth) { 
-                    const now = Tone.now(); 
-                    synth.triggerAttackRelease("C5", "0.3", now); 
-                    synth.triggerAttackRelease("G5", "0.3", now + 0.4); 
-                    synth.triggerAttackRelease("C6", "0.3", now + 0.8); 
-                } 
-            };
+            startButton.addEventListener('click', () => { if (typeof Tone !== 'undefined') { Tone.start(); synth = new Tone.Synth().toDestination(); } startScreen.style.display = 'none'; appContent.classList.remove('hidden'); });
+            const playSound = () => { if (synth) { const now = Tone.now(); synth.triggerAttackRelease("C5", "0.3", now); synth.triggerAttackRelease("G5", "0.3", now + 0.4); synth.triggerAttackRelease("C6", "0.3", now + 0.8); } };
             socket.on('update_patient_list', (patients) => {
                 const waitingPatients = patients.filter(p => p.status === 'en_espera' || p.status === 'ausente');
                 const attendingPatients = patients.filter(p => p.status === 'atendiendo');
                 const preAdmissionPatients = patients.filter(p => p.status === 'pre_internacion');
-                
-                patientListContainer.innerHTML = ''; 
-                if (waitingPatients.length === 0) { 
-                    patientListContainer.appendChild(noPatientsMessage); 
-                } else { 
-                    waitingPatients.slice(0, 10).forEach(patient => { 
-                        const patientCard = document.createElement('div'); 
-                        patientCard.className = 'bg-gray-800 rounded-lg p-4 flex items-center space-x-4'; 
-                        let statusClass = patient.status === 'ausente' ? 'status-ausente' : ''; 
-                        patientCard.innerHTML = `<div class="w-4 h-4 rounded-full dot-${patient.nivelTriage} flex-shrink-0"></div><p class="text-2xl font-semibold ${statusClass}">${patient.nombre}</p>`; 
-                        patientListContainer.appendChild(patientCard); 
-                    }); 
-                }
-                consultorioListContainer.innerHTML = ''; 
-                if (attendingPatients.length === 0) { 
-                    consultorioListContainer.appendChild(noConsultorioMessage); 
-                } else { 
-                    attendingPatients.forEach(patient => { 
-                        const consultorioCard = document.createElement('div'); 
-                        consultorioCard.className = 'bg-gray-800 rounded-lg p-4'; 
-                        consultorioCard.innerHTML = `<p class="text-2xl font-semibold">${patient.nombre}</p><p class="text-xl text-blue-400 font-bold">Consultorio ${patient.consultorio}</p><p class="text-md text-gray-400">Atendido por: ${patient.doctor || 'Médico'}</p>`; 
-                        consultorioListContainer.appendChild(consultorioCard); 
-                    }); 
-                }
-                preAdmissionListContainer.innerHTML = ''; 
-                if (preAdmissionPatients.length === 0) { 
-                    preAdmissionListContainer.appendChild(noPreAdmissionMessage); 
-                } else { 
-                    preAdmissionPatients.forEach(patient => { 
-                        const patientCard = document.createElement('div'); 
-                        patientCard.className = 'bg-gray-800 rounded-lg p-4 flex items-center space-x-4'; 
-                        patientCard.innerHTML = `<div class="w-4 h-4 rounded-full dot-${patient.nivelTriage} flex-shrink-0"></div><p class="text-2xl font-semibold">${patient.nombre}</p>`; 
-                        preAdmissionListContainer.appendChild(patientCard); 
-                    }); 
-                }
+                patientListContainer.innerHTML = ''; if (waitingPatients.length === 0) { patientListContainer.appendChild(noPatientsMessage); } else { waitingPatients.slice(0, 10).forEach(patient => { const patientCard = document.createElement('div'); patientCard.className = 'bg-gray-800 rounded-lg p-4 flex items-center space-x-4'; let statusClass = patient.status === 'ausente' ? 'status-ausente' : ''; patientCard.innerHTML = `<div class="w-4 h-4 rounded-full dot-${patient.nivelTriage} flex-shrink-0"></div><p class="text-2xl font-semibold ${statusClass}">${patient.nombre}</p>`; patientListContainer.appendChild(patientCard); }); }
+                consultorioListContainer.innerHTML = ''; if (attendingPatients.length === 0) { consultorioListContainer.appendChild(noConsultorioMessage); } else { attendingPatients.forEach(patient => { const consultorioCard = document.createElement('div'); consultorioCard.className = 'bg-gray-800 rounded-lg p-4'; consultorioCard.innerHTML = `<p class="text-2xl font-semibold">${patient.nombre}</p><p class="text-xl text-blue-400 font-bold">Consultorio ${patient.consultorio}</p><p class="text-md text-gray-400">Atendido por: ${patient.doctor || 'Médico'}</p>`; consultorioListContainer.appendChild(consultorioCard); }); }
+                preAdmissionListContainer.innerHTML = ''; if (preAdmissionPatients.length === 0) { preAdmissionListContainer.appendChild(noPreAdmissionMessage); } else { preAdmissionPatients.forEach(patient => { const patientCard = document.createElement('div'); patientCard.className = 'bg-gray-800 rounded-lg p-4 flex items-center space-x-4'; patientCard.innerHTML = `<div class="w-4 h-4 rounded-full dot-${patient.nivelTriage} flex-shrink-0"></div><p class="text-2xl font-semibold">${patient.nombre}</p>`; preAdmissionListContainer.appendChild(patientCard); }); }
             });
-            socket.on('emergency_status_update', (isEmergency) => { 
-                emergencyView.classList.toggle('hidden', !isEmergency); 
-            });
-            socket.on('update_call', (callData) => { 
-                if (callData) { 
-                    callPatientName.textContent = callData.nombre; 
-                    callConsultorio.textContent = `Consultorio ${callData.consultorio}`; 
-                    callOverlay.classList.remove('hidden'); 
-                    callCard.classList.add('call-animation'); 
-                    playSound(); 
-                } else { 
-                    callOverlay.classList.add('hidden'); 
-                    callCard.classList.remove('call-animation'); 
-                } 
-            });
+            socket.on('emergency_status_update', (isEmergency) => { emergencyView.classList.toggle('hidden', !isEmergency); });
+            socket.on('update_call', (callData) => { if (callData) { callPatientName.textContent = callData.nombre; callConsultorio.textContent = `Consultorio ${callData.consultorio}`; callOverlay.classList.remove('hidden'); callCard.classList.add('call-animation'); playSound(); } else { callOverlay.classList.add('hidden'); callCard.classList.remove('call-animation'); } });
         });
     </script>
 </body>
