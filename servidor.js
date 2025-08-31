@@ -36,7 +36,6 @@ const loadData = () => {
         if (fs.existsSync(DB_FILE)) { const data = JSON.parse(fs.readFileSync(DB_FILE)); patients = data.patients || []; attendedHistory = data.attendedHistory || []; }
         if (fs.existsSync(USERS_FILE)) { users = JSON.parse(fs.readFileSync(USERS_FILE)); } else { users = [{ user: "admin", pass: "admin2025", role: "registro", fullName: "Admin Enfermería" }, { user: "medico1", pass: "med1", role: "medico", fullName: "Dr. House" }, { user: "stats", pass: "stats123", role: "estadisticas", fullName: "Jefe de Guardia" }]; saveUsers(); }
         if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else {
-            // --- NUEVO: Precarga de la lista completa de presets ---
             observationPresets = [
                 { text: "Parada cardiorrespiratoria", level: "rojo" }, { text: "Parada respiratoria", level: "rojo" }, { text: "Obstrucción severa de la vía aérea", level: "rojo" }, { text: "Estado epiléptico (convulsionando activamente)", level: "rojo" }, { text: "Shock (cualquier etiología)", level: "rojo" }, { text: "Arritmias con inestabilidad hemodinámica", level: "rojo" }, { text: "Politraumatismo grave", level: "rojo" }, { text: "Hemorragia exanguinante o masiva", level: "rojo" }, { text: "Quemadura >20% o con compromiso de vía aérea", level: "rojo" }, { text: "Intoxicación con depresión respiratoria o coma", level: "rojo" }, { text: "Traumatismo craneoencefálico con herniación cerebral", level: "rojo" },
                 { text: "Dolor torácico de posible origen coronario", level: "naranja" }, { text: "Dificultad respiratoria severa (crisis asmática grave, EPOC descompensado)", level: "naranja" }, { text: "Reacción alérgica grave (anafilaxia)", level: "naranja" }, { text: "Alteración aguda del nivel de conciencia", level: "naranja" }, { text: "Signos focales de Accidente Cerebrovascular (ACV) agudo", level: "naranja" }, { text: "Hemorragia mayor incontrolable", level: "naranja" }, { text: "Hiperglucemia o hipoglucemia severa con alteración de conciencia", level: "naranja" }, { text: "Traumatismo craneoencefálico severo o penetrante", level: "naranja" }, { text: "Dolor abdominal intenso de inicio súbito (\"abdomen en tabla\")", level: "naranja" }, { text: "Fiebre alta en paciente inmunodeprimido, oncológico o neonato", level: "naranja" }, { text: "Agitación psicomotriz severa o ideación suicida activa", level: "naranja" }, { text: "Sepsis o sospecha de shock séptico", level: "naranja" }, { text: "Intoxicación grave con alteración de signos vitales", level: "naranja" },
@@ -69,18 +68,7 @@ io.on('connection', (socket) => {
     socket.on('search_patient_history', ({ query, role }) => { if (!isAuthenticated) return; const normalizedQuery = query.toUpperCase().trim(); let results = attendedHistory.filter(p => (p.dni && p.dni.includes(normalizedQuery)) || p.nombre.toUpperCase().includes(normalizedQuery)).sort((a, b) => b.attendedAt - a.attendedAt); if (role === 'registro') { results = results.map(p => { const { doctorNotes, ...patientData } = p; return patientData; }); } socket.emit('patient_history_result', results); });
     socket.on('add_preset', (newPreset) => { if (isAuthenticated && userRole === 'admin' && newPreset.text && newPreset.level && !observationPresets.some(p => p.text === newPreset.text)) { observationPresets.push(newPreset); savePresets(); io.emit('presets_update', observationPresets); } });
     socket.on('delete_preset', (presetText) => { if (isAuthenticated && userRole === 'admin' && presetText) { observationPresets = observationPresets.filter(p => p.text !== presetText); savePresets(); io.emit('presets_update', observationPresets); } });
-    
-    // --- NUEVO EVENTO: Editar un preset existente ---
-    socket.on('edit_preset', ({ oldText, newText, newLevel }) => {
-        if (isAuthenticated && userRole === 'admin') {
-            const presetIndex = observationPresets.findIndex(p => p.text === oldText);
-            if (presetIndex > -1) {
-                observationPresets[presetIndex] = { text: newText, level: newLevel };
-                savePresets();
-                io.emit('presets_update', observationPresets);
-            }
-        }
-    });
+    socket.on('edit_preset', ({ oldText, newText, newLevel }) => { if (isAuthenticated && userRole === 'admin') { const presetIndex = observationPresets.findIndex(p => p.text === oldText); if (presetIndex > -1) { observationPresets[presetIndex] = { text: newText, level: newLevel }; savePresets(); io.emit('presets_update', observationPresets); } } });
 
     const setupProtectedEvents = () => {
         const events = {
@@ -88,7 +76,7 @@ io.on('connection', (socket) => {
             'mark_as_attended': ({ patientId, attendedBy }) => { const patientIndex = patients.findIndex(p => p.id === patientId); if (patientIndex > -1) { const [attendedPatient] = patients.splice(patientIndex, 1); attendedPatient.attendedAt = Date.now(); const attendingUser = users.find(u => u.user === attendedBy); attendedPatient.attendedBy = attendingUser ? attendingUser.fullName : attendedBy; attendedPatient.guardDay = getDoctorGuard(new Date(attendedPatient.attendedAt)); attendedHistory.push(attendedPatient); } },
             'update_patient_level': ({ id, newLevel }) => { if (userRole !== 'registro') return; const p = patients.find(p => p.id === id); if (p) { p.nivelTriage = newLevel; p.ordenTriage = triageOrder[newLevel]; sortPatients(); } },
             'add_nurse_evolution': ({ id, note }) => { if (userRole !== 'registro') return; const patient = patients.find(p => p.id === id); if (patient) { if (!patient.nurseEvolutions) patient.nurseEvolutions = []; patient.nurseEvolutions.push({ text: note, user: currentUser.fullName, timestamp: Date.now() }); } },
-            'call_patient': ({ id, consultorio }) => { if (userRole !== 'medico') return; const p = patients.find(p => p.id === id); if (p) { currentlyCalled = { nombre: p.nombre, consultorio }; p.status = 'atendiendo'; p.consultorio = consultorio; p.doctor = currentUser.fullName; io.emit('update_call', currentlyCalled); setTimeout(() => { currentlyCalled = null; io.emit('update_call', null); }, 20000); } },
+            'call_patient': ({ id, consultorio }) => { if (userRole !== 'medico') return; const p = patients.find(p => p.id === id); if (p) { patients.forEach(pt => { if (pt.doctor === currentUser.fullName && pt.status === 'atendiendo') { pt.status = 'en_espera'; delete pt.consultorio; }}); p.status = 'atendiendo'; p.consultorio = consultorio; p.doctor = currentUser.fullName; currentlyCalled = { nombre: p.nombre, consultorio }; io.emit('update_call', currentlyCalled); setTimeout(() => { currentlyCalled = null; io.emit('update_call', null); }, 20000); } },
             'update_patient_status': ({ id, status }) => { if (userRole !== 'medico') return; const p = patients.find(p => p.id === id); if (p) { p.status = status; if (status === 'ausente' || status === 'pre_internacion') { delete p.consultorio; } sortPatients(); } },
             'start_emergency': () => { isEmergency = true; io.emit('emergency_status_update', isEmergency); },
             'end_emergency': () => { isEmergency = false; io.emit('emergency_status_update', isEmergency); },
