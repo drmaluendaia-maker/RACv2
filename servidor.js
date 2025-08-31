@@ -12,7 +12,6 @@ const io = socketIo(server);
 const PORT = 3000;
 const DB_FILE = 'pacientes.json';
 const USERS_FILE = 'usuarios.json';
-// --- NUEVO: Archivo para guardar los presets ---
 const PRESETS_FILE = 'presets.json';
 
 const ADMIN_MASTER_PASS = "superadmin";
@@ -23,7 +22,6 @@ app.get('/', (req, res) => res.redirect('/index.html'));
 
 let patients = [];
 let attendedHistory = [];
-// --- NUEVO: Variable para los presets ---
 let observationPresets = [];
 let isEmergency = false;
 let currentlyCalled = null;
@@ -31,15 +29,23 @@ const triageOrder = { 'rojo': 1, 'naranja': 2, 'amarillo': 3, 'verde': 4, 'azul'
 
 const saveData = () => { fs.writeFile(DB_FILE, JSON.stringify({ patients, attendedHistory }, null, 2), err => { if (err) console.error("Error al guardar pacientes:", err); }); };
 const saveUsers = () => { fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), err => { if (err) console.error("Error al guardar usuarios:", err); }); };
-// --- NUEVO: Función para guardar los presets ---
 const savePresets = () => { fs.writeFile(PRESETS_FILE, JSON.stringify(observationPresets, null, 2), err => { if (err) console.error("Error al guardar presets:", err); }); };
 
 const loadData = () => {
     try {
         if (fs.existsSync(DB_FILE)) { const data = JSON.parse(fs.readFileSync(DB_FILE)); patients = data.patients || []; attendedHistory = data.attendedHistory || []; }
         if (fs.existsSync(USERS_FILE)) { users = JSON.parse(fs.readFileSync(USERS_FILE)); } else { users = [{ user: "admin", pass: "admin2025", role: "registro", fullName: "Admin Enfermería" }, { user: "medico1", pass: "med1", role: "medico", fullName: "Dr. House" }, { user: "stats", pass: "stats123", role: "estadisticas", fullName: "Jefe de Guardia" }]; saveUsers(); }
-        // --- NUEVO: Cargar presets desde archivo ---
-        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else { observationPresets = ["Parada cardiorrespiratoria", "Dolor torácico", "Dificultad respiratoria", "Tos con mocos", "Tos seca", "Dolor de garganta", "Cefalea leve", "Gastroenteritis"]; savePresets(); }
+        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else {
+            // --- NUEVO: Precarga de la lista completa de presets ---
+            observationPresets = [
+                { text: "Parada cardiorrespiratoria", level: "rojo" }, { text: "Parada respiratoria", level: "rojo" }, { text: "Obstrucción severa de la vía aérea", level: "rojo" }, { text: "Estado epiléptico (convulsionando activamente)", level: "rojo" }, { text: "Shock (cualquier etiología)", level: "rojo" }, { text: "Arritmias con inestabilidad hemodinámica", level: "rojo" }, { text: "Politraumatismo grave", level: "rojo" }, { text: "Hemorragia exanguinante o masiva", level: "rojo" }, { text: "Quemadura >20% o con compromiso de vía aérea", level: "rojo" }, { text: "Intoxicación con depresión respiratoria o coma", level: "rojo" }, { text: "Traumatismo craneoencefálico con herniación cerebral", level: "rojo" },
+                { text: "Dolor torácico de posible origen coronario", level: "naranja" }, { text: "Dificultad respiratoria severa (crisis asmática grave, EPOC descompensado)", level: "naranja" }, { text: "Reacción alérgica grave (anafilaxia)", level: "naranja" }, { text: "Alteración aguda del nivel de conciencia", level: "naranja" }, { text: "Signos focales de Accidente Cerebrovascular (ACV) agudo", level: "naranja" }, { text: "Hemorragia mayor incontrolable", level: "naranja" }, { text: "Hiperglucemia o hipoglucemia severa con alteración de conciencia", level: "naranja" }, { text: "Traumatismo craneoencefálico severo o penetrante", level: "naranja" }, { text: "Dolor abdominal intenso de inicio súbito (\"abdomen en tabla\")", level: "naranja" }, { text: "Fiebre alta en paciente inmunodeprimido, oncológico o neonato", level: "naranja" }, { text: "Agitación psicomotriz severa o ideación suicida activa", level: "naranja" }, { text: "Sepsis o sospecha de shock séptico", level: "naranja" }, { text: "Intoxicación grave con alteración de signos vitales", level: "naranja" },
+                { text: "Dolor torácico atípico o pleurítico", level: "amarillo" }, { text: "Dificultad respiratoria moderada (neumonía sin hipoxia severa)", level: "amarillo" }, { text: "Crisis asmática leve a moderada que responde a tratamiento inicial", level: "amarillo" }, { text: "Vómitos o diarrea persistente con signos de deshidratación moderada", level: "amarillo" }, { text: "Dolor abdominal moderado y continuo", level: "amarillo" }, { text: "Cefalea intensa de inicio súbito o con signos de alarma", level: "amarillo" }, { text: "Heridas complejas que requieren sutura (profundas, en cara o manos)", level: "amarillo" }, { text: "Fracturas o luxaciones de huesos mayores (fémur, húmero)", level: "amarillo" }, { text: "Quemaduras de segundo grado entre el 10% y 20% de superficie corporal", level: "amarillo" }, { text: "Retención aguda de orina", level: "amarillo" }, { text: "Crisis hipertensiva sin daño a órgano diana", level: "amarillo" }, { text: "Sangrado digestivo hemodinámicamente estable (melenas, rectorragia)", level: "amarillo" }, { text: "Cuerpo extraño en ojo, oído o nariz", level: "amarillo" }, { text: "Cólico nefrítico (dolor renal intenso)", level: "amarillo" }, { text: "Dolor testicular agudo", level: "amarillo" }, { text: "Traumatismo ocular", level: "amarillo" }, { text: "Crisis de ansiedad severa que no cede", level: "amarillo" },
+                { text: "Tos, mocos, congestión nasal (resfriado común, gripe sin complicaciones)", level: "verde" }, { text: "Dolor de garganta leve a moderado (faringitis, amigdalitis)", level: "verde" }, { text: "Cefalea leve (tipo tensional, migraña habitual ya diagnosticada)", level: "verde" }, { text: "Dolor de oídos (otitis externa o media)", level: "verde" }, { text: "Síntomas de infección urinaria sin fiebre ni dolor lumbar (cistitis)", level: "verde" }, { text: "Gastroenteritis aguda sin signos de deshidratación", level: "verde" }, { text: "Erupciones cutáneas leves (urticaria localizada, dermatitis de contacto)", level: "verde" }, { text: "Dolores musculares o articulares crónicos agudizados (lumbalgia mecánica)", level: "verde" }, { text: "Conjuntivitis", level: "verde" }, { text: "Ansiedad o crisis de pánico leves ya controladas", level: "verde" }, { text: "Heridas menores, abrasiones o cortes superficiales que no requieren sutura", level: "verde" }, { text: "Renovación de recetas de medicamentos crónicos (si se ha agotado)", level: "verde" }, { text: "Dolor dental", level: "verde" }, { text: "Esguinces o torceduras leves", level: "verde" }, { text: "Vértigo o mareos posicionales", level: "verde" }, { text: "Picaduras de insectos con reacción local", level: "verde" },
+                { text: "Control de heridas ya suturadas o curas programadas", level: "azul" }, { text: "Retirada de puntos, grapas o yesos", level: "azul" }, { text: "Administración de una vacuna o inyectable programado", level: "azul" }, { text: "Síntomas catarrales de varios días de evolución sin empeoramiento", level: "azul" }, { text: "Dudas sobre medicación crónica o efectos secundarios leves", level: "azul" }, { text: "Solicitud de justificantes médicos o informes administrativos", level: "azul" }, { text: "Malestar general leve sin otros síntomas asociados", level: "azul" }, { text: "Problemas de piel crónicos (verrugas, eccemas leves) sin cambios agudos", level: "azul" }, { text: "Resultados de análisis o pruebas complementarias", level: "azul" }, { text: "Anticoncepción de emergencia (píldora del día después)", level: "azul" }, { text: "Seguimiento de patologías crónicas estables", level: "azul" }, { text: "Tapón de cerumen en el oído", level: "azul" }
+            ];
+            savePresets();
+        }
         console.log("Datos cargados correctamente.");
     } catch (err) { console.error("Error al cargar datos:", err); }
 };
@@ -50,15 +56,7 @@ const getDoctorGuard = (date) => { let guardDate = new Date(date); if (date.getH
 
 io.on('connection', (socket) => {
     let isAuthenticated = false; let userRole = null; let currentUser = null;
-    const authenticateSocket = (user) => {
-        isAuthenticated = true; userRole = user.role; currentUser = user;
-        socket.emit('auth_success', { role: user.role, user: user.user });
-        // --- NUEVO: Enviar presets al usuario de registro ---
-        if (user.role === 'registro') {
-            socket.emit('presets_update', observationPresets);
-        }
-    };
-
+    const authenticateSocket = (user) => { isAuthenticated = true; userRole = user.role; currentUser = user; socket.emit('auth_success', { role: user.role, user: user.user }); if (user.role === 'registro') { socket.emit('presets_update', observationPresets); } };
     socket.on('authenticate_user', ({ user, pass }) => { const foundUser = users.find(u => u.user === user && u.pass === pass); if (foundUser) authenticateSocket(foundUser); else socket.emit('auth_fail'); });
     socket.emit('update_patient_list', patients); socket.emit('emergency_status_update', isEmergency); socket.emit('update_call', currentlyCalled);
     const sendFullUserList = (targetSocket) => { const displayUsers = [{ user: "superadmin", pass: ADMIN_MASTER_PASS, role: "admin", fullName: "Administrador Principal" }, ...users]; targetSocket.emit('users_update', displayUsers); };
@@ -69,20 +67,18 @@ io.on('connection', (socket) => {
     socket.on('edit_user', ({ username, newFullName, newPassword }) => { if (isAuthenticated && userRole === 'admin' && username !== 'superadmin') { const userIndex = users.findIndex(u => u.user === username); if (userIndex > -1) { users[userIndex].fullName = newFullName; users[userIndex].pass = newPassword; saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } } });
     socket.on('reset_patient_data', () => { if (isAuthenticated && userRole === 'admin') { patients = []; attendedHistory = []; saveData(); io.emit('update_patient_list', patients); socket.emit('reset_success'); } });
     socket.on('search_patient_history', ({ query, role }) => { if (!isAuthenticated) return; const normalizedQuery = query.toUpperCase().trim(); let results = attendedHistory.filter(p => (p.dni && p.dni.includes(normalizedQuery)) || p.nombre.toUpperCase().includes(normalizedQuery)).sort((a, b) => b.attendedAt - a.attendedAt); if (role === 'registro') { results = results.map(p => { const { doctorNotes, ...patientData } = p; return patientData; }); } socket.emit('patient_history_result', results); });
+    socket.on('add_preset', (newPreset) => { if (isAuthenticated && userRole === 'admin' && newPreset.text && newPreset.level && !observationPresets.some(p => p.text === newPreset.text)) { observationPresets.push(newPreset); savePresets(); io.emit('presets_update', observationPresets); } });
+    socket.on('delete_preset', (presetText) => { if (isAuthenticated && userRole === 'admin' && presetText) { observationPresets = observationPresets.filter(p => p.text !== presetText); savePresets(); io.emit('presets_update', observationPresets); } });
     
-    // --- NUEVOS EVENTOS: Para gestionar presets ---
-    socket.on('add_preset', (newPreset) => {
-        if (isAuthenticated && userRole === 'admin' && newPreset && !observationPresets.includes(newPreset)) {
-            observationPresets.push(newPreset);
-            savePresets();
-            io.emit('presets_update', observationPresets); // Notificar a todos (admin y registro)
-        }
-    });
-    socket.on('delete_preset', (presetToDelete) => {
-        if (isAuthenticated && userRole === 'admin' && presetToDelete) {
-            observationPresets = observationPresets.filter(p => p !== presetToDelete);
-            savePresets();
-            io.emit('presets_update', observationPresets); // Notificar a todos
+    // --- NUEVO EVENTO: Editar un preset existente ---
+    socket.on('edit_preset', ({ oldText, newText, newLevel }) => {
+        if (isAuthenticated && userRole === 'admin') {
+            const presetIndex = observationPresets.findIndex(p => p.text === oldText);
+            if (presetIndex > -1) {
+                observationPresets[presetIndex] = { text: newText, level: newLevel };
+                savePresets();
+                io.emit('presets_update', observationPresets);
+            }
         }
     });
 
