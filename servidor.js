@@ -55,7 +55,7 @@ const getDoctorGuard = (date) => { let guardDate = new Date(date); if (date.getH
 
 io.on('connection', (socket) => {
     let isAuthenticated = false; let userRole = null; let currentUser = null;
-    const authenticateSocket = (user) => { isAuthenticated = true; userRole = user.role; currentUser = user; socket.emit('auth_success', { role: user.role, user: user.user }); if (user.role === 'registro') { socket.emit('presets_update', observationPresets); } };
+    const authenticateSocket = (user) => { isAuthenticated = true; userRole = user.role; currentUser = user; socket.emit('auth_success', { role: user.role, user: user.user }); if (user.role === 'registro' || user.role === 'admin') { socket.emit('presets_update', observationPresets); } };
     socket.on('authenticate_user', ({ user, pass }) => { const foundUser = users.find(u => u.user === user && u.pass === pass); if (foundUser) authenticateSocket(foundUser); else socket.emit('auth_fail'); });
     socket.emit('update_patient_list', patients); socket.emit('emergency_status_update', isEmergency); socket.emit('update_call', currentlyCalled);
     const sendFullUserList = (targetSocket) => { const displayUsers = [{ user: "superadmin", pass: ADMIN_MASTER_PASS, role: "admin", fullName: "Administrador Principal" }, ...users]; targetSocket.emit('users_update', displayUsers); };
@@ -66,9 +66,12 @@ io.on('connection', (socket) => {
     socket.on('edit_user', ({ username, newFullName, newPassword }) => { if (isAuthenticated && userRole === 'admin' && username !== 'superadmin') { const userIndex = users.findIndex(u => u.user === username); if (userIndex > -1) { users[userIndex].fullName = newFullName; users[userIndex].pass = newPassword; saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } } });
     socket.on('reset_patient_data', () => { if (isAuthenticated && userRole === 'admin') { patients = []; attendedHistory = []; saveData(); io.emit('update_patient_list', patients); socket.emit('reset_success'); } });
     socket.on('search_patient_history', ({ query, role }) => { if (!isAuthenticated) return; const normalizedQuery = query.toUpperCase().trim(); let results = attendedHistory.filter(p => (p.dni && p.dni.includes(normalizedQuery)) || p.nombre.toUpperCase().includes(normalizedQuery)).sort((a, b) => b.attendedAt - a.attendedAt); if (role === 'registro') { results = results.map(p => { const { doctorNotes, ...patientData } = p; return patientData; }); } socket.emit('patient_history_result', results); });
-    socket.on('add_preset', (newPreset) => { if (isAuthenticated && userRole === 'admin' && newPreset.text && newPreset.level && !observationPresets.some(p => p.text === newPreset.text)) { observationPresets.push(newPreset); savePresets(); io.emit('presets_update', observationPresets); } });
-    socket.on('delete_preset', (presetText) => { if (isAuthenticated && userRole === 'admin' && presetText) { observationPresets = observationPresets.filter(p => p.text !== presetText); savePresets(); io.emit('presets_update', observationPresets); } });
-    socket.on('edit_preset', ({ oldText, newText, newLevel }) => { if (isAuthenticated && userRole === 'admin') { const presetIndex = observationPresets.findIndex(p => p.text === oldText); if (presetIndex > -1) { observationPresets[presetIndex] = { text: newText, level: newLevel }; savePresets(); io.emit('presets_update', observationPresets); } } });
+    
+    // --- ACTUALIZADO: Permitir que admin y registro gestionen presets ---
+    const hasPresetPermission = () => isAuthenticated && (userRole === 'admin' || userRole === 'registro');
+    socket.on('add_preset', (newPreset) => { if (hasPresetPermission() && newPreset.text && newPreset.level && !observationPresets.some(p => p.text === newPreset.text)) { observationPresets.push(newPreset); savePresets(); io.emit('presets_update', observationPresets); } });
+    socket.on('delete_preset', (presetText) => { if (hasPresetPermission() && presetText) { observationPresets = observationPresets.filter(p => p.text !== presetText); savePresets(); io.emit('presets_update', observationPresets); } });
+    socket.on('edit_preset', ({ oldText, newText, newLevel }) => { if (hasPresetPermission()) { const presetIndex = observationPresets.findIndex(p => p.text === oldText); if (presetIndex > -1) { observationPresets[presetIndex] = { text: newText, level: newLevel }; savePresets(); io.emit('presets_update', observationPresets); } } });
 
     const setupProtectedEvents = () => {
         const events = {
