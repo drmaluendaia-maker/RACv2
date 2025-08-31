@@ -38,7 +38,12 @@ const loadData = () => {
         if (fs.existsSync(USERS_FILE)) { users = JSON.parse(fs.readFileSync(USERS_FILE)); } else { users = [{ user: "admin", pass: "admin2025", role: "registro", fullName: "Admin Enfermería" }, { user: "medico1", pass: "med1", role: "medico", fullName: "Dr. House" }, { user: "stats", pass: "stats123", role: "estadisticas", fullName: "Jefe de Guardia" }]; }
         users.forEach(u => { if (!u.token) u.token = crypto.randomBytes(16).toString('hex'); });
         saveUsers();
-        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else { observationPresets = [ { text: "Parada cardiorrespiratoria", level: "rojo" }, { text: "Dolor torácico", level: "naranja" }, { text: "Tos con mocos", level: "verde" }]; savePresets(); }
+        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else {
+            observationPresets = [
+                { text: "Parada cardiorrespiratoria", level: "rojo" }, { text: "Dolor torácico", level: "naranja" }, { text: "Tos con mocos", level: "verde" }
+            ];
+            savePresets();
+        }
         console.log("Datos cargados correctamente.");
     } catch (err) { console.error("Error al cargar datos:", err); }
 };
@@ -91,11 +96,21 @@ server.listen(PORT, () => {
     loadData();
     const ip = getLocalIpAddress();
     const url = `http://${ip}:${PORT}`;
+    
     console.log('====================================================');
     console.log('      Servidor de Triage INICIADO CORRECTAMENTE     ');
     console.log('====================================================');
     console.log(`\nAccede al portal principal en tu navegador:`);
     console.log(`\x1b[32m%s\x1b[0m`, ` -> ${url}`);
+    console.log('\nO usa los siguientes enlaces directos:');
+    console.log(` -> App de Registro: ${url}/registro.html`);
+    console.log(` -> App del Médico:   ${url}/medico.html`);
+    console.log(` -> Pantalla de TV:   ${url}/tv.html`);
+    console.log(` -> Estadísticas:     ${url}/estadisticas.html`);
+    console.log(` -> Administración:   ${url}/admin.html`);
+    console.log('\n(Usa estas direcciones en cualquier dispositivo de la misma red)');
+    console.log('\nPara detener el servidor, cierra esta ventana.');
+
     open(url);
 });
 
@@ -110,4 +125,3 @@ function getLocalIpAddress() {
     }
     return 'localhost';
 }
-
