@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal del Sistema de Triage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="container mx-auto p-8 text-center">
+        <header class="mb-12">
+            <h1 class="text-5xl font-black text-slate-800">Sistema de Gestión de Guardia</h1>
+            <p class="text-xl text-slate-500 mt-2">Hospital A. Illia</p>
+        </header>
+        <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+            <!-- --- ACTUALIZADO: Añadido target="_blank" para abrir en nueva pestaña --- -->
+            <a href="/registro.html" target="_blank" rel="noopener noreferrer" class="card bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center"><div class="text-5xl mb-4">📝</div><h2 class="text-2xl font-bold text-slate-700">Registro</h2><p class="text-slate-500 mt-2 text-sm">Ingresar nuevos pacientes al sistema.</p></a>
+            <a href="/medico.html" target="_blank" rel="noopener noreferrer" class="card bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center"><div class="text-5xl mb-4">⚕️</div><h2 class="text-2xl font-bold text-slate-700">Médico</h2><p class="text-slate-500 mt-2 text-sm">Gestionar la atención de pacientes.</p></a>
+            
+            <!-- --- Este enlace se mantiene en la misma pestaña --- -->
+            <a href="/tv.html" class="card bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center"><div class="text-5xl mb-4">📺</div><h2 class="text-2xl font-bold text-slate-700">Pantalla TV</h2><p class="text-slate-500 mt-2 text-sm">Mostrar el estado de la sala de espera.</p></a>
+            
+            <!-- --- ACTUALIZADO: Añadido target="_blank" para abrir en nueva pestaña --- -->
+            <a href="/estadisticas.html" target="_blank" rel="noopener noreferrer" class="card bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center"><div class="text-5xl mb-4">📊</div><h2 class="text-2xl font-bold text-slate-700">Estadísticas</h2><p class="text-slate-500 mt-2 text-sm">Visualizar datos y métricas de la guardia.</p></a>
+            <a href="/admin.html" target="_blank" rel="noopener noreferrer" class="card bg-red-600 text-white rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center"><div class="text-5xl mb-4">⚙️</div><h2 class="text-2xl font-bold">Admin</h2><p class="text-red-100 mt-2 text-sm">Gestionar usuarios del sistema.</p></a>
+        </main>
+    </div>
+</body>
+</html>

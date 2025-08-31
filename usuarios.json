@@ -1,0 +1,32 @@
+[
+  {
+    "user": "admin",
+    "pass": "RAC2025%",
+    "role": "registro",
+    "fullName": "Enfermería"
+  },
+  {
+    "user": "medico1",
+    "pass": "med1",
+    "role": "medico",
+    "fullName": "Dr. House"
+  },
+  {
+    "user": "stats",
+    "pass": "stats123",
+    "role": "estadisticas",
+    "fullName": "Jefe de Guardia"
+  },
+  {
+    "user": "XMaluenda",
+    "pass": "Malu15264",
+    "fullName": "Dr. Maluenda",
+    "role": "medico"
+  },
+  {
+    "user": "BGalli",
+    "pass": "BGalliNN",
+    "fullName": "Dr. Galli",
+    "role": "medico"
+  }
+]

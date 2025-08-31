@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="loginOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-lg shadow-2xl text-center w-full max-w-sm"><h2 class="text-2xl font-bold mb-4">Acceso de Administrador</h2><form id="loginForm"><input type="password" id="passwordInput" class="w-full px-4 py-3 border rounded-lg mb-4 text-center" placeholder="••••••••"><button type="submit" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg">Ingresar</button><p id="loginError" class="text-red-500 text-sm mt-2 h-4"></p></form></div>
+    </div>
+    <div id="editUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-40 flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-lg shadow-2xl w-full max-w-md"><h2 class="text-2xl font-bold mb-6">Editar Usuario</h2><form id="editUserForm"><input type="hidden" id="editUsername"><div class="mb-4"><label for="editFullName" class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="editFullName" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div class="mb-6"><label for="editPassword" class="block text-sm font-medium text-gray-700">Nueva Contraseña</label><input type="text" id="editPassword" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div class="flex justify-end gap-4"><button type="button" id="cancelEditBtn" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg">Cancelar</button><button type="submit" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Guardar Cambios</button></div></form></div>
+    </div>
+    <div id="appContent" class="opacity-0 transition-opacity duration-500 container mx-auto p-8">
+        <h1 class="text-4xl font-bold text-center mb-8">Gestión de Usuarios</h1>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md self-start">
+                <h2 class="text-2xl font-bold mb-4">Crear Nuevo Usuario</h2>
+                <form id="addUserForm" class="space-y-4"><div><label for="newUsername" class="block text-sm font-medium text-gray-700">Nombre de Usuario</label><input type="text" id="newUsername" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newPassword" class="block text-sm font-medium text-gray-700">Contraseña</label><input type="text" id="newPassword" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newFullName" class="block text-sm font-medium text-gray-700">Nombre Completo</label><input type="text" id="newFullName" required class="mt-1 w-full px-3 py-2 border rounded-md"></div><div><label for="newRole" class="block text-sm font-medium text-gray-700">Rol</label><select id="newRole" class="mt-1 w-full px-3 py-2 border rounded-md"><option value="registro">Registro (Enfermería)</option><option value="medico">Médico</option><option value="estadisticas">Estadísticas</option></select></div><button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg">Crear Usuario</button></form>
+            </div>
+            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-bold mb-4">Usuarios del Sistema</h2>
+                <div id="userList" class="space-y-3"></div>
+            </div>
+        </div>
+        <!-- --- NUEVO: Sección de Acciones Peligrosas --- -->
+        <div class="mt-8 bg-red-50 border-l-4 border-red-500 p-6 rounded-r-lg">
+            <h2 class="text-2xl font-bold text-red-800">Acciones Peligrosas</h2>
+            <p class="text-red-700 mt-2 mb-4">Estas acciones no se pueden deshacer. Úsalas con precaución.</p>
+            <button id="resetDataBtn" class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg">Restaurar Sistema (Borrar Pacientes)</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const loginOverlay = document.getElementById('loginOverlay'); const loginForm = document.getElementById('loginForm'); const passwordInput = document.getElementById('passwordInput'); const loginError = document.getElementById('loginError'); const appContent = document.getElementById('appContent'); const addUserForm = document.getElementById('addUserForm'); const userList = document.getElementById('userList'); const editUserModal = document.getElementById('editUserModal'); const editUserForm = document.getElementById('editUserForm'); const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const resetDataBtn = document.getElementById('resetDataBtn');
+
+            loginForm.addEventListener('submit', (e) => { e.preventDefault(); socket.emit('admin_login', passwordInput.value); });
+            socket.on('admin_auth_success', () => { loginOverlay.style.display = 'none'; appContent.classList.remove('opacity-0'); socket.emit('get_users'); });
+            socket.on('auth_fail', () => { loginError.textContent = 'Contraseña incorrecta.'; });
+            const renderUsers = (users) => {
+                userList.innerHTML = '';
+                users.forEach(user => {
+                    const userDiv = document.createElement('div'); userDiv.className = 'bg-gray-50 p-3 rounded flex items-center justify-between'; const isProtected = user.user === 'superadmin';
+                    userDiv.innerHTML = `<div><p class="font-bold">${user.fullName} <span class="text-xs font-normal text-gray-500">(${user.role})</span></p><p class="text-sm text-gray-600">Usuario: <span class="font-mono">${user.user}</span></p><p class="text-sm text-gray-600">Clave: <span class="font-mono">${user.pass}</span></p></div><div class="flex gap-2"><button ${isProtected ? 'disabled' : ''} data-username="${user.user}" data-fullname="${user.fullName}" data-password="${user.pass}" class="edit-btn text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed">Editar</button><button ${isProtected ? 'disabled' : ''} data-username="${user.user}" data-fullname="${user.fullName}" class="delete-btn text-xs bg-red-100 text-red-800 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed">Eliminar</button></div>`;
+                    userList.appendChild(userDiv);
+                });
+            };
+            socket.on('users_update', renderUsers);
+            addUserForm.addEventListener('submit', (e) => { e.preventDefault(); const newUser = { user: document.getElementById('newUsername').value, pass: document.getElementById('newPassword').value, fullName: document.getElementById('newFullName').value, role: document.getElementById('newRole').value, }; socket.emit('add_user', newUser); addUserForm.reset(); });
+            userList.addEventListener('click', (e) => { const target = e.target; if (target.classList.contains('delete-btn')) { const username = target.dataset.username; const fullName = target.dataset.fullname; if (confirm(`¿Estás seguro de que quieres eliminar al usuario "${fullName}" (${username})? Esta acción no se puede deshacer.`)) { socket.emit('delete_user', username); } } if (target.classList.contains('edit-btn')) { document.getElementById('editUsername').value = target.dataset.username; document.getElementById('editFullName').value = target.dataset.fullname; document.getElementById('editPassword').value = target.dataset.password; editUserModal.classList.remove('hidden'); } });
+            cancelEditBtn.addEventListener('click', () => { editUserModal.classList.add('hidden'); });
+            editUserForm.addEventListener('submit', (e) => { e.preventDefault(); const updatedUser = { username: document.getElementById('editUsername').value, newFullName: document.getElementById('editFullName').value, newPassword: document.getElementById('editPassword').value }; socket.emit('edit_user', updatedUser); editUserModal.classList.add('hidden'); });
+
+            // --- NUEVO: Lógica para restaurar datos ---
+            resetDataBtn.addEventListener('click', () => {
+                if (confirm('¡ATENCIÓN! Esta acción borrará TODO el historial de pacientes atendidos de forma permanente. ¿Estás seguro de que quieres continuar?')) {
+                    if (prompt('Para confirmar, escribe "BORRAR TODO" en mayúsculas:') === 'BORRAR TODO') {
+                        socket.emit('reset_patient_data');
+                    } else {
+                        alert('Confirmación incorrecta. La operación ha sido cancelada.');
+                    }
+                }
+            });
+            socket.on('reset_success', () => {
+                alert('La base de datos de pacientes ha sido restaurada a cero.');
+            });
+        });
+    </script>
+</body>
+</html>

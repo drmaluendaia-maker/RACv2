@@ -1,0 +1,14 @@
+{
+  "name": "triage-servidor",
+  "version": "1.0.0",
+  "description": "Servidor para la aplicacion de triage hospitalario",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "open": "^8.4.0",
+    "socket.io": "^4.7.5"
+  }
+}
