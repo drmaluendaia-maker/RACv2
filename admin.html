@@ -26,7 +26,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             const socket = io(); const loginOverlay = document.getElementById('loginOverlay'); const loginForm = document.getElementById('loginForm'); const passwordInput = document.getElementById('passwordInput'); const rememberMeCheck = document.getElementById('rememberMe'); const loginError = document.getElementById('loginError'); const appContent = document.getElementById('appContent'); const addUserForm = document.getElementById('addUserForm'); const userList = document.getElementById('userList'); const editUserModal = document.getElementById('editUserModal'); const editUserForm = document.getElementById('editUserForm'); const cancelEditBtn = document.getElementById('cancelEditBtn'); const resetDataBtn = document.getElementById('resetDataBtn'); const addPresetForm = document.getElementById('addPresetForm'); const newPresetInput = document.getElementById('newPresetInput'); const newPresetLevel = document.getElementById('newPresetLevel'); const presetList = document.getElementById('presetList'); const editPresetModal = document.getElementById('editPresetModal'); const editPresetForm = document.getElementById('editPresetForm'); const cancelEditPresetBtn = document.getElementById('cancelEditPresetBtn');
             
-            loginForm.addEventListener('submit', (e) => { e.preventDefault(); socket.emit('admin_login', passwordInput.value); });
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                // Corrección: Enviar un objeto al servidor
+                socket.emit('admin_login', {
+                    pass: passwordInput.value,
+                    remember: rememberMeCheck.checked
+                });
+            });
+
             socket.on('admin_auth_success', (data) => { if (rememberMeCheck.checked) { localStorage.setItem('triageAuthToken', data.token); } loginOverlay.style.display = 'none'; appContent.classList.remove('hidden', 'opacity-0'); socket.emit('get_users'); });
             socket.on('auth_fail', () => { loginError.textContent = 'Contraseña incorrecta.'; });
             const renderUsers = (users) => { userList.innerHTML = ''; users.forEach(user => { const userDiv = document.createElement('div'); userDiv.className = 'bg-gray-50 p-3 rounded flex items-center justify-between'; const isProtected = user.user === 'superadmin'; userDiv.innerHTML = `<div><p class="font-bold">${user.fullName} <span class="text-xs font-normal text-gray-500">(${user.role})</span></p><p class="text-sm text-gray-600">Usuario: <span class="font-mono">${user.user}</span></p><p class="text-sm text-gray-600">Clave: <span class="font-mono">${user.pass}</span></p></div><div class="flex gap-2"><button ${isProtected ? 'disabled' : ''} data-username="${user.user}" data-fullname="${user.fullName}" data-password="${user.pass}" class="edit-btn text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed">Editar</button><button ${isProtected ? 'disabled' : ''} data-username="${user.user}" data-fullname="${user.fullName}" class="delete-btn text-xs bg-red-100 text-red-800 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed">Eliminar</button></div>`; userList.appendChild(userDiv); }); };
@@ -47,4 +55,3 @@
     </script>
 </body>
 </html>
-
