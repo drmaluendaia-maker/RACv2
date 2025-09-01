@@ -38,12 +38,7 @@ const loadData = () => {
         if (fs.existsSync(USERS_FILE)) { users = JSON.parse(fs.readFileSync(USERS_FILE)); } else { users = [{ user: "admin", pass: "admin2025", role: "registro", fullName: "Admin Enfermería" }, { user: "medico1", pass: "med1", role: "medico", fullName: "Dr. House" }, { user: "stats", pass: "stats123", role: "estadisticas", fullName: "Jefe de Guardia" }]; }
         users.forEach(u => { if (!u.token) u.token = crypto.randomBytes(16).toString('hex'); });
         saveUsers();
-        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else {
-            observationPresets = [
-                { text: "Parada cardiorrespiratoria", level: "rojo" }, { text: "Dolor torácico", level: "naranja" }, { text: "Tos con mocos", level: "verde" }
-            ];
-            savePresets();
-        }
+        if (fs.existsSync(PRESETS_FILE)) { observationPresets = JSON.parse(fs.readFileSync(PRESETS_FILE)); } else { observationPresets = [ { text: "Parada cardiorrespiratoria", level: "rojo" }, { text: "Dolor torácico", level: "naranja" }, { text: "Tos con mocos", level: "verde" }]; savePresets(); }
         console.log("Datos cargados correctamente.");
     } catch (err) { console.error("Error al cargar datos:", err); }
 };
@@ -56,10 +51,10 @@ io.on('connection', (socket) => {
     let isAuthenticated = false; let userRole = null; let currentUser = null;
     const authenticateSocket = (user) => { isAuthenticated = true; userRole = user.role; currentUser = user; socket.emit('auth_success', { role: user.role, user: user.user, token: user.token }); if (user.role === 'registro' || user.role === 'admin') { socket.emit('presets_update', observationPresets); } };
     socket.on('authenticate_user', ({ user, pass }) => { const foundUser = users.find(u => u.user === user && u.pass === pass); if (foundUser) authenticateSocket(foundUser); else socket.emit('auth_fail'); });
-    socket.on('authenticate_token', (token) => { const foundUser = users.find(u => u.token === token); if (foundUser) authenticateSocket(foundUser); else socket.emit('auth_fail'); });
+    socket.on('authenticate_token', (token) => { const foundUser = users.find(u => u.token === token); if (foundUser) authenticateSocket(foundUser); else { socket.emit('auth_fail'); } });
     socket.emit('update_patient_list', patients); socket.emit('emergency_status_update', isEmergency); socket.emit('update_call', currentlyCalled);
     const sendFullUserList = (targetSocket) => { const displayUsers = [{ user: "superadmin", pass: ADMIN_MASTER_PASS, role: "admin", fullName: "Administrador Principal" }, ...users]; targetSocket.emit('users_update', displayUsers); };
-    socket.on('admin_login', (pass) => { if (pass === ADMIN_MASTER_PASS) { isAuthenticated = true; userRole = 'admin'; socket.join('admin_room'); socket.emit('admin_auth_success', {token: crypto.randomBytes(16).toString('hex')}); sendFullUserList(socket); socket.emit('presets_update', observationPresets); } else { socket.emit('auth_fail'); } });
+    socket.on('admin_login', ({pass, remember}) => { if (pass === ADMIN_MASTER_PASS) { isAuthenticated = true; userRole = 'admin'; socket.join('admin_room'); const token = remember ? crypto.randomBytes(16).toString('hex') : null; socket.emit('admin_auth_success', {token}); sendFullUserList(socket); socket.emit('presets_update', observationPresets); } else { socket.emit('auth_fail'); } });
     socket.on('get_users', () => { if (isAuthenticated && userRole === 'admin') sendFullUserList(socket); });
     socket.on('add_user', (newUser) => { if (isAuthenticated && userRole === 'admin' && newUser.user && newUser.pass && newUser.fullName && newUser.role) { if (!users.some(u => u.user === newUser.user) && newUser.user !== 'superadmin') { newUser.token = crypto.randomBytes(16).toString('hex'); users.push(newUser); saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } } });
     socket.on('delete_user', (username) => { if (isAuthenticated && userRole === 'admin' && username !== 'superadmin') { users = users.filter(u => u.user !== username); saveUsers(); sendFullUserList(io.to('admin_room')); sendFullUserList(socket); } });
@@ -92,36 +87,5 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => console.log('Un cliente se ha desconectado.'));
 });
 
-server.listen(PORT, () => {
-    loadData();
-    const ip = getLocalIpAddress();
-    const url = `http://${ip}:${PORT}`;
-    
-    console.log('====================================================');
-    console.log('      Servidor de Triage INICIADO CORRECTAMENTE     ');
-    console.log('====================================================');
-    console.log(`\nAccede al portal principal en tu navegador:`);
-    console.log(`\x1b[32m%s\x1b[0m`, ` -> ${url}`);
-    console.log('\nO usa los siguientes enlaces directos:');
-    console.log(` -> App de Registro: ${url}/registro.html`);
-    console.log(` -> App del Médico:   ${url}/medico.html`);
-    console.log(` -> Pantalla de TV:   ${url}/tv.html`);
-    console.log(` -> Estadísticas:     ${url}/estadisticas.html`);
-    console.log(` -> Administración:   ${url}/admin.html`);
-    console.log('\n(Usa estas direcciones en cualquier dispositivo de la misma red)');
-    console.log('\nPara detener el servidor, cierra esta ventana.');
-
-    open(url);
-});
-
-function getLocalIpAddress() {
-    const interfaces = os.networkInterfaces();
-    for (const name of Object.keys(interfaces)) {
-        for (const net of interfaces[name]) {
-            if (net.family === 'IPv4' && !net.internal) {
-                return net.address;
-            }
-        }
-    }
-    return 'localhost';
-}
+server.listen(PORT, () => { loadData(); const ip = getLocalIpAddress(); const url = `http://${ip}:${PORT}`; console.log('===================================================='); console.log('      Servidor de Triage INICIADO CORRECTAMENTE     '); console.log('===================================================='); console.log(`\nAccede al portal principal en tu navegador:`); console.log(`\x1b[32m%s\x1b[0m`, ` -> ${url}`); open(url); });
+function getLocalIpAddress() { const interfaces = os.networkInterfaces(); for (const name of Object.keys(interfaces)) { for (const net of interfaces[name]) { if (net.family === 'IPv4' && !net.internal) { return net.address; } } } return 'localhost'; }
