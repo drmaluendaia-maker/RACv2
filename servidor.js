@@ -72,7 +72,30 @@ io.on('connection', (socket) => {
             'mark_as_attended': ({ patientId, attendedBy }) => { const patientIndex = patients.findIndex(p => p.id === patientId); if (patientIndex > -1) { const [attendedPatient] = patients.splice(patientIndex, 1); attendedPatient.attendedAt = Date.now(); const attendingUser = users.find(u => u.user === attendedBy); attendedPatient.attendedBy = attendingUser ? attendingUser.fullName : attendedBy; attendedPatient.guardDay = getDoctorGuard(new Date(attendedPatient.attendedAt)); attendedHistory.push(attendedPatient); } },
             'update_patient_level': ({ id, newLevel }) => { if (userRole !== 'registro') return; const p = patients.find(p => p.id === id); if (p) { p.nivelTriage = newLevel; p.ordenTriage = triageOrder[newLevel]; sortPatients(); } },
             'add_nurse_evolution': ({ id, note }) => { if (userRole !== 'registro') return; const patient = patients.find(p => p.id === id); if (patient) { if (!patient.nurseEvolutions) patient.nurseEvolutions = []; patient.nurseEvolutions.push({ text: note, user: currentUser.fullName, timestamp: Date.now() }); } },
-            'call_patient': ({ id, consultorio }) => { if (userRole !== 'medico') return; const p = patients.find(p => p.id === id); if (p) { patients.forEach(pt => { if (pt.doctor === currentUser.fullName && pt.status === 'atendiendo') { pt.status = pt.previousStatus || 'en_espera'; delete pt.consultorio; }}); p.previousStatus = p.status; p.status = 'atendiendo'; p.consultorio = consultorio; p.doctor = currentUser.fullName; currentlyCalled = { nombre: p.nombre, consultorio }; io.emit('update_call', currentlyCalled); setTimeout(() => { currentlyCalled = null; io.emit('update_call', null); }, 20000); } },
+            'call_patient': ({ id, consultorio }) => {
+                if (userRole !== 'medico') return;
+                
+                // Corrección: Usar find en lugar de forEach
+                const currentlyAttending = patients.find(pt => pt.doctor === currentUser.fullName && pt.status === 'atendiendo');
+                if (currentlyAttending) {
+                    currentlyAttending.status = currentlyAttending.previousStatus || 'en_espera';
+                    delete currentlyAttending.consultorio;
+                }
+
+                const p = patients.find(p => p.id === id);
+                if (p) {
+                    p.previousStatus = p.status;
+                    p.status = 'atendiendo';
+                    p.consultorio = consultorio;
+                    p.doctor = currentUser.fullName;
+                    currentlyCalled = { nombre: p.nombre, consultorio };
+                    io.emit('update_call', currentlyCalled);
+                    setTimeout(() => {
+                        currentlyCalled = null;
+                        io.emit('update_call', null);
+                    }, 20000);
+                }
+            },
             'update_patient_status': ({ id, status }) => { if (userRole !== 'medico') return; const p = patients.find(p => p.id === id); if (p) { p.status = status; if (status === 'ausente' || status === 'pre_internacion') { delete p.consultorio; } sortPatients(); } },
             'start_emergency': () => { isEmergency = true; io.emit('emergency_status_update', isEmergency); },
             'end_emergency': () => { isEmergency = false; io.emit('emergency_status_update', isEmergency); },
